@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapas</title>
+    <style>
+        #map {
+            width: 70%;
+            height: 90vh; /* vh --> unidad css, altura en vertical de la ventana (50% de la ventana) */
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="content">
+        <p>dfflsdfdslfjdskfjdslfdksjfsdlkfjdsklfsdjfkldsjfldfdsfslkjfsldkfjkljdlkfjsdf</p>
+    </div>
+
+    <script>
+        var map;
+
+        var infoWindow;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: 38.9965055, lng: -0.1674364},
+                zoom: 15,
+                mapTypeId: 'hybrid', // Tipo de mapa que se va ha dibujar (mapa con imagenes de satelite, carreteras y calles
+                styles: [ // personalizar estilos del mapa
+                    {
+                        featureType: 'poi', // Ocultar puntos de interes: negocios,etc.
+                        stylers: [{visibility: 'off'}]
+                    },
+                    {
+                        featureType: 'transit', // Ocultar estaciones de tren, paradas de autobus, etc.
+                        stylers: [{visibility: 'off'}]
+                    }
+                ],
+                mapTypeControl: false, // Ocultar control de tipo de mapa
+                streetViewControl: false, // ocultar botón que permite pasar a stricview
+                rotateControl: false // ocultar
+            });
+
+            map.setTilt(0); // Forzar que siempre esté en la vista desde arriba.
+
+            infoWindow = new google.maps.InfoWindow();
+
+            cargarPosiciones();
+
+            cargarParcelas();
+        }
+
+        function cargarPosiciones() {
+            fetch('data/posiciones.json').then(function (r) {
+                return r.json();
+            }).then(function (j) {
+                j.forEach(function (posicion) {
+                    var marker = new google.maps.Marker({
+                        position: {lat: posicion.lat, lng: posicion.lng},
+                        label: posicion.id + "",
+                        animation: google.maps.Animation.DROP,
+                        map: map
+                    });
+                    marker.addListener('click', function () {
+                        infoWindow.setContent(document.getElementById('content').cloneNode(true));
+                        infoWindow.open(map, marker);
+                    })
+                })
+            })
+        }
+
+        function cargarParcelas() {
+            fetch('data/parcelas.json').then(function (r) {
+                return r.json();
+            }).then(function (j) {
+
+                let bounds = new google.maps.LatLngBounds();
+
+                j.forEach(function (parcela) {
+                    let polygon = new google.maps.Polygon({
+                        paths: parcela.vertices,
+                        strokeColor: parcela.color, // Color del borde
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: parcela.color, // Color de relleno
+                        fillOpacity: 0.35,
+                        map: map
+                    });
+
+                    polygon.getPath().getArray().forEach(function (v) {
+                        bounds.extend(v);
+                    })
+                })
+
+                map.fitBounds(bounds);
+
+            })
+        }
+
+    </script>
+
+    <!-- Carga la api de google maps -->
+    <script
+            src="https://maps.googleapis.com/maps/api/js?callback=initMap" async defer>
+    </script>
+
+</body>
+</html>
